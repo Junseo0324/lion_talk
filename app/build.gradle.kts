@@ -1,4 +1,5 @@
 plugins {
+    id("org.jetbrains.kotlin.kapt")
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -37,6 +38,12 @@ android {
     buildFeatures {
         compose = true
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/INDEX.LIST"
+            excludes += "/META-INF/io.netty.versions.properties"
+        }
+    }
 }
 
 dependencies {
@@ -56,4 +63,31 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    //jetpack compose
+    implementation(libs.compose.nav)
+    implementation(libs.coroutines.core)
+    implementation(libs.lifecycle.viewmodel.compose)
+
+    implementation(libs.lifecycle.viewmodel.ktx)
+
+    //db
+    implementation(libs.room.runtime)
+    implementation(libs.datastore.preferences)
+    implementation(libs.androidx.runtime.livedata)
+
+    //mqtt
+    implementation(libs.hivemq.mqtt.client)
+    //기타
+    implementation(libs.coil.compose)
+
+    //retrofit
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.gson)
+    implementation(libs.gson)
+    implementation(libs.okhttp.logging)
+
+
+
+    kapt(libs.room.compiler)
 }
