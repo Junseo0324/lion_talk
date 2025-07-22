@@ -28,21 +28,17 @@ import com.example.liontalk.data.local.entity.ChatRoomEntity
 fun ChatRoomItem(room: ChatRoomEntity,
                  onClick: (ChatRoomEntity) -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .combinedClickable(
-                onClick = { onClick(room) },
+        modifier = Modifier.fillMaxWidth().padding(16.dp)
+            .combinedClickable (
+                onClick = { onClick(room)},
                 onLongClick = {}
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text= room.title,
+                text = room.title,
                 style = MaterialTheme.typography.titleLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -55,16 +51,13 @@ fun ChatRoomItem(room: ChatRoomEntity,
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = room.owner,
+                        text = room.owner.name,
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
-
                     )
 
                     Text(
@@ -78,5 +71,4 @@ fun ChatRoomItem(room: ChatRoomEntity,
             }
         }
     }
-
 }

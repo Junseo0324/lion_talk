@@ -12,7 +12,7 @@ import com.example.liontalk.data.local.entity.ChatMessageEntity
 import com.example.liontalk.data.local.entity.ChatRoomEntity
 
 @TypeConverters(Converter::class)
-@Database(entities = [ChatRoomEntity::class, ChatMessageEntity::class], version = 1)
+@Database(entities = [ChatRoomEntity::class, ChatMessageEntity::class], version = 5)
 abstract class AppDataBase: RoomDatabase() {
     abstract fun chatRoomDao(): ChatRoomDao
     abstract fun chatMessageDao(): ChatMessageDao

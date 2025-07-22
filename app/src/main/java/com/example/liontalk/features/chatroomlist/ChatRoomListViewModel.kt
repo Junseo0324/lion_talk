@@ -7,7 +7,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.liontalk.data.local.entity.ChatRoomEntity
 import com.example.liontalk.data.repository.ChatRoomRepository
+import com.example.liontalk.data.repository.UserPreferenceRepository
 import com.example.liontalk.model.ChatRoomMapper.toDto
+import com.example.liontalk.model.ChatUser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -19,24 +21,33 @@ class ChatRoomListViewModel(application: Application): ViewModel() {
 
     private val chatRoomRepository = ChatRoomRepository(application)
 
+    private val userPreferenceRepository = UserPreferenceRepository.getInstance(application)
+    val me: ChatUser get() = userPreferenceRepository.requireMe()
+
     init {
         loadChatRooms()
     }
 
     private fun loadChatRooms() {
+
         viewModelScope.launch {
+
+            userPreferenceRepository.loadUserFromStorage()
+
             _state.value = _state.value?.copy(isLoading = true)
             try {
                 withContext(Dispatchers.IO) {
                     chatRoomRepository.syncFromServer()
                 }
-                chatRoomRepository.getChatRoomEntities().observeForever { rooms ->
-                    _state.postValue(
-                        ChatRoomListState(
-                            isLoading = false,
-                            chatRooms = rooms
+                withContext(Dispatchers.Main) {
+                    chatRoomRepository.getChatRoomEntities().observeForever { rooms ->
+                        _state.postValue(
+                            ChatRoomListState(
+                                isLoading = false,
+                                chatRooms = rooms
+                            )
                         )
-                    )
+                    }
                 }
             } catch (e: Exception) {
                 _state.value = _state.value?.copy(isLoading = false, error = e.message)
@@ -49,13 +60,11 @@ class ChatRoomListViewModel(application: Application): ViewModel() {
             try {
                 val room = ChatRoomEntity(
                     title = title,
-                    owner = "junseooo",
+                    owner = me,
                     users = emptyList(),
                     createdAt = System.currentTimeMillis()
                 )
-                if (room != null) {
-                    chatRoomRepository.createChatRoom(room.toDto())
-                }
+                chatRoomRepository.createChatRoom(room.toDto())
             } catch (e: Exception) {
                 _state.value = _state.value?.copy(isLoading = false, error = e.message)
             }
