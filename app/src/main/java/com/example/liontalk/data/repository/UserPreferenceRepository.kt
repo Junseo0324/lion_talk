@@ -32,12 +32,21 @@ class UserPreferenceRepository private constructor(private val context: Context)
     }
 
     companion object {
-        private var _instance: UserPreferenceRepository? =null
+        @Volatile
+        private var _instance: UserPreferenceRepository? = null
 
-        fun getInstance(context: Context): UserPreferenceRepository {
-            return _instance ?: synchronized(this) {
-                _instance ?: UserPreferenceRepository(context.applicationContext)
+        fun init(context: Context) {
+            if (_instance == null) {
+                synchronized(this) {
+                    if (_instance == null) {
+                        _instance = UserPreferenceRepository(context.applicationContext)
+                    }
+                }
             }
+        }
+
+        fun getInstance(): UserPreferenceRepository {
+            return _instance ?: throw IllegalStateException("UserPreferenceRepository not initialized")
         }
     }
 

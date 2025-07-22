@@ -22,21 +22,18 @@ import kotlinx.coroutines.withContext
 
 class ChatRoomViewModel(application: Application, private val roomId: Int) : ViewModel() {
 
-    private val chatMessageRepository = ChatMessageRepository(application)
+    private val chatMessageRepository = ChatMessageRepository(application.applicationContext)
     val messages : LiveData<List<ChatMessageEntity>> = chatMessageRepository.getMessagesForRoom(roomId)
 
-    private val userPreferenceRepository = UserPreferenceRepository.getInstance(application)
-    val me : ChatUser get() = userPreferenceRepository.requireMe()
+    private val userPreferenceRepository = UserPreferenceRepository.getInstance()
 
+    val me : ChatUser get() = userPreferenceRepository.requireMe()
 
     private val _event = MutableSharedFlow<ChatRoomEvent>()
     val event = _event.asSharedFlow()
 
     init {
         viewModelScope.launch {
-
-            userPreferenceRepository.loadUserFromStorage()
-
             withContext(Dispatchers.IO) {
                 MqttClient.connect()
             }
@@ -48,7 +45,7 @@ class ChatRoomViewModel(application: Application, private val roomId: Int) : Vie
     }
 
     //메세지 전송
-    fun sendMessage(sender: String, content: String) {
+    fun sendMessage(content: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val dto = ChatMessageDto(
                 roomId = roomId,
@@ -94,7 +91,7 @@ class ChatRoomViewModel(application: Application, private val roomId: Int) : Vie
             topic.endsWith("/typing") -> onReceivedTyping(message)
         }
     }
-    //
+
     private fun onReceivedMessage(message: String) {
         val dto = Gson().fromJson(message,ChatMessageDto::class.java)
 
@@ -116,18 +113,24 @@ class ChatRoomViewModel(application: Application, private val roomId: Int) : Vie
     }
 
     private var typing = false
-    private var typingStopJob: Job? =null
+    private var typingStopJop: Job? = null
 
     fun onTypingChanged(text: String) {
         if (text.isNotBlank() && !typing) {
-            publishTypingStatus(typing)
+            publishTypingStatus(true)
         }
-        typingStopJob?.cancel()
-        typingStopJob = viewModelScope.launch {
+        typingStopJop?.cancel()
+        typingStopJop = viewModelScope.launch {
             delay(2000)
             typing = false
             publishTypingStatus(false)
         }
+    }
+
+    fun stopTyping() {
+        typing = false
+        publishTypingStatus(false)
+        typingStopJop?.cancel()
     }
 
 

@@ -27,8 +27,6 @@ import kotlinx.coroutines.delay
 @Composable
 fun LauncherScreen(navController: NavHostController) {
     val context = LocalContext.current
-    val userPreferenceRepository = UserPreferenceRepository.getInstance(context)
-
     var alpha by remember { mutableStateOf(0f) }
 
     val animatedAlpha by animateFloatAsState(
@@ -38,16 +36,19 @@ fun LauncherScreen(navController: NavHostController) {
     )
 
     LaunchedEffect(Unit) {
+
+        UserPreferenceRepository.init(context)
+        val userPreferenceRepository = UserPreferenceRepository.getInstance()
+
         delay(200)
         alpha = 1f
 
         delay(1500)
-
-        if (!userPreferenceRepository.isInitialized)
-            userPreferenceRepository.loadUserFromStorage()
+        userPreferenceRepository.loadUserFromStorage()
 
         val user = userPreferenceRepository.meOrNull
-        val destination =if (user == null || user.name.isBlank()) {
+
+        val destination = if (user == null || user.name.isBlank()) {
             Screen.SettingScreen.route
         } else {
             Screen.ChatRoomListScreen.route
@@ -56,7 +57,6 @@ fun LauncherScreen(navController: NavHostController) {
         navController.navigate(destination) {
             popUpTo("launcher") {inclusive = true}
         }
-
     }
 
     Box(
