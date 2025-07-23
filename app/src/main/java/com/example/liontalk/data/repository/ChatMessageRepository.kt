@@ -7,7 +7,11 @@ import com.example.liontalk.data.local.datasource.ChatMessageLocalDataSource
 import com.example.liontalk.data.local.entity.ChatMessageEntity
 import com.example.liontalk.data.remote.datasource.ChatMessageRemoteDataSource
 import com.example.liontalk.data.remote.dto.ChatMessageDto
+import com.example.liontalk.model.ChatMessage
 import com.example.liontalk.model.ChatMessageMapper.toEntity
+import com.example.liontalk.model.ChatMessageMapper.toModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class ChatMessageRepository(context: Context) {
     private val remote = ChatMessageRemoteDataSource()
@@ -20,6 +24,11 @@ class ChatMessageRepository(context: Context) {
     // 현재 로컬 DB에 저장된 메세지 목록을 가져옴
     fun getMessagesForRoom(roomId: Int): LiveData<List<ChatMessageEntity>> {
         return local.getMessageForRoom(roomId)
+    }
+
+    fun getMessagesForRoomFlow(roomId: Int): Flow<List<ChatMessage>> {
+        return local.getMessageForRoomFlow(roomId) //List -> entity 하나씩 toModel() 로 변환
+            .map { entity -> entity.map { it.toModel() } }
     }
 
 
@@ -49,5 +58,23 @@ class ChatMessageRepository(context: Context) {
     //MQTT 수신 메세지 로컬 DB 저장
     suspend fun receiveMessage(message: ChatMessageDto) {
         local.insert(message.toEntity())
+    }
+
+
+    suspend fun fetchUnreadCountFromServer(roomId: Int, lastReadMessageId: Int?): Int {
+        val remoteMessages = remote.fetchMessagesByRoomId(roomId)
+
+        if (lastReadMessageId == null) return remoteMessages.size
+        val index = remoteMessages.indexOfFirst { it.id == lastReadMessageId }
+        return if (index == -1) {
+            remoteMessages.size
+        } else {
+            remoteMessages.drop(index+1).size
+        }
+    }
+
+
+    suspend fun getLatestMessage(roomId: Int) : ChatMessageEntity? {
+        return local.getLatestMessage(roomId)
     }
 }

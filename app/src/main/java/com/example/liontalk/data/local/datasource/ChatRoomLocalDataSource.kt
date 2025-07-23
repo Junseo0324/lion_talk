@@ -4,12 +4,19 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import com.example.liontalk.data.local.AppDataBase
 import com.example.liontalk.data.local.entity.ChatRoomEntity
+import com.example.liontalk.model.ChatUser
+import kotlinx.coroutines.flow.Flow
 
 class ChatRoomLocalDataSource(context: Context) {
     private val dao = AppDataBase.create(context).chatRoomDao()
 
     fun getChatRooms() : LiveData<List<ChatRoomEntity>> {
         return dao.getChatRooms()
+    }
+
+
+    fun getChatRoomsFlow() : Flow<List<ChatRoomEntity>> {
+        return dao.getChatRoomsFlow()
     }
 
     fun getChatRoom(roomId: Int) : ChatRoomEntity {
@@ -26,6 +33,22 @@ class ChatRoomLocalDataSource(context: Context) {
 
     suspend fun delete(chatRoom: ChatRoomEntity) {
         dao.delete(chatRoom)
+    }
+
+    suspend fun updateUsers(id: Int, users: List<ChatUser>) {
+        dao.updateUsers(id,users)
+    }
+
+    suspend fun updateLastReadMessageId(id: Int, lastReadMessageId: Int) {
+        dao.updateLastReadMessageId(id,lastReadMessageId)
+    }
+
+    suspend fun updateUnReadCount(id: Int, unReadCount: Int) {
+        dao.updateUnReadCount(id,unReadCount)
+    }
+
+    suspend fun updateIsLocked(id: Int, isLocked: Boolean) {
+        dao.updateLockStatus(id,isLocked)
     }
 
     suspend fun getCount(): Int {

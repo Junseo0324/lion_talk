@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import com.example.liontalk.data.local.AppDataBase
 import com.example.liontalk.data.local.entity.ChatMessageEntity
+import kotlinx.coroutines.flow.Flow
 
 class ChatMessageLocalDataSource(context: Context) {
     private val dao = AppDataBase.create(context).chatMessageDao()
@@ -20,7 +21,15 @@ class ChatMessageLocalDataSource(context: Context) {
         return dao.getMessageForRoom(roomId)
     }
 
+    fun getMessageForRoomFlow(roomId: Int) : Flow<List<ChatMessageEntity>> {
+        return dao.getMessagesForRoomFlow(roomId)
+    }
+
     suspend fun getMessages(roomId: Int) : List<ChatMessageEntity> {
         return dao.getMessages(roomId)
+    }
+
+    suspend fun getLatestMessage(roomId: Int) : ChatMessageEntity? {
+        return dao.getLatestMessage(roomId)
     }
 }

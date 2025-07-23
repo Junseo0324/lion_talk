@@ -7,7 +7,13 @@ import com.example.liontalk.data.local.datasource.ChatRoomLocalDataSource
 import com.example.liontalk.data.local.entity.ChatRoomEntity
 import com.example.liontalk.data.remote.datasource.ChatRoomRemoteDataSource
 import com.example.liontalk.data.remote.dto.ChatRoomDto
+import com.example.liontalk.data.remote.dto.addUserIfNotExists
+import com.example.liontalk.model.ChatRoom
 import com.example.liontalk.model.ChatRoomMapper.toEntity
+import com.example.liontalk.model.ChatRoomMapper.toModel
+import com.example.liontalk.model.ChatUser
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class ChatRoomRepository(context: Context) {
     private val remote = ChatRoomRemoteDataSource()
@@ -17,6 +23,10 @@ class ChatRoomRepository(context: Context) {
     //local room db 에서 chatroomentity 목록을 가져옴
     fun getChatRoomEntities() : LiveData<List<ChatRoomEntity>> {
         return local.getChatRooms()
+    }
+
+    fun getChatRoomsFlow(): Flow<List<ChatRoom>> {
+        return local.getChatRoomsFlow().map { it.mapNotNull { entity -> entity.toModel() }}
     }
 
 
@@ -52,6 +62,47 @@ class ChatRoomRepository(context: Context) {
         } catch (e: Exception) {
             throw e
         }
+    }
+
+    suspend fun enterRoom(user: ChatUser,roomId: Int): ChatRoom {
+        //서버로부터 최신 룸 정보를 가져옴
+        val remoteRoom = remote.fetchRoom(roomId)
+
+        val requestDto = remoteRoom.addUserIfNotExists(user)
+
+        val updatedRoom = remote.updateRoom(requestDto)
+
+        if (updatedRoom !=null) {
+            local.updateUsers(roomId, updatedRoom.users)
+        }
+
+        return updatedRoom?.toModel() ?: throw Exception("서버 입장 처리 실패")
+    }
+
+    suspend fun updateLastReadMessageId(roomId: Int, lastReadMessageId: Int) {
+        local.updateLastReadMessageId(roomId, lastReadMessageId)
+    }
+
+    suspend fun updateUnReadCount(roomId: Int,unReadCount: Int) {
+        local.updateUnReadCount(roomId,unReadCount)
+    }
+
+    suspend fun updateLockStatus(roomId:Int,isLocked: Boolean) {
+        try {
+            val remoteRoom = remote.fetchRoom(roomId)
+            val updated = remoteRoom.copy(isLocked = isLocked)
+            val result = remote.updateRoom(updated) ?: throw Exception("방 잠금($isLocked) 실패")
+
+            result?.let {
+                local.updateIsLocked(roomId,isLocked)
+            }
+        } catch (e: Exception) {
+            Log.d("ROOM", "채팅방 상태 변경중 오류 발생 : ${e.message}")
+        }
+    }
+
+    suspend fun getChatRoom(roomId: Int) : ChatRoom {
+        return local.getChatRoom(roomId).toModel()
     }
 
 

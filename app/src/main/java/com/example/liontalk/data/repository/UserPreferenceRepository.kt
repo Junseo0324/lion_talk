@@ -29,6 +29,8 @@ class UserPreferenceRepository private constructor(private val context: Context)
     suspend fun setUser(user: ChatUser) {
         PreferenceDataStore.setString(context,"USER_NAME",user.name)
         user.avatarUrl?.let { PreferenceDataStore.setString(context,"AVATAR_URL",it) }
+
+        _user.value = user
     }
 
     companion object {

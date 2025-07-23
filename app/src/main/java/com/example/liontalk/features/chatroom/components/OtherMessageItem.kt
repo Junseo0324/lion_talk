@@ -28,9 +28,10 @@ import coil.compose.AsyncImagePainter
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import com.example.liontalk.data.local.entity.ChatMessageEntity
+import com.example.liontalk.model.ChatMessage
 
 @Composable
-fun OtherMessageItem(message: ChatMessageEntity) {
+fun OtherMessageItem(message: ChatMessage) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.Bottom
