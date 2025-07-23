@@ -14,12 +14,10 @@ interface ChatMessageDao {
     suspend fun insert(message: ChatMessageEntity)
 
     @Query("SELECT * FROM chat_message WHERE roomId = :roomId ORDER BY id ASC")
-    fun getMessageForRoom(roomId: Int): LiveData<List<ChatMessageEntity>>
-
+    fun getMessagesForRoom(roomId: Int) : LiveData<List<ChatMessageEntity>>
 
     @Query("SELECT * FROM chat_message WHERE roomId = :roomId ORDER BY id ASC")
     fun getMessagesForRoomFlow(roomId: Int) : Flow<List<ChatMessageEntity>>
-
 
     @Query("DELETE FROM chat_message")
     suspend fun clear()
@@ -28,5 +26,11 @@ interface ChatMessageDao {
     suspend fun getMessages(roomId: Int) : List<ChatMessageEntity>
 
     @Query("SELECT * FROM chat_message WHERE roomId =:roomId ORDER BY id DESC LIMIT 1")
-    suspend fun getLatestMessage(roomId: Int) : ChatMessageEntity?
+    suspend fun getLatestMessage(roomId: Int):ChatMessageEntity?
+
+    @Query("DELETE FROM chat_message WHERE roomId = :roomId ")
+    suspend fun deleteMessagesByRoomId(roomId:Int)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(messages: List<ChatMessageEntity>)
 }

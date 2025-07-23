@@ -62,25 +62,22 @@ fun ChatRoomListScreen(navController: NavHostController) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text(
-                        text = "LionTalk", fontSize = 20.sp, fontWeight = FontWeight.Bold
+                    Text( text = "LionTalk",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            showAddRoomDialog = true
-                        }
-                    ) {
+                    IconButton(onClick = {
+                        showAddRoomDialog = true
+                    }){
                         Icon(Icons.Default.Add, contentDescription = "채팅방 생성")
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick ={
-                            navController.navigate("setting")
-                        }
-                    ) {
+                    IconButton(onClick = {
+                        navController.navigate("setting")
+                    }) {
                         Icon(Icons.Default.Settings, contentDescription = "설정")
                     }
                 }
@@ -88,24 +85,28 @@ fun ChatRoomListScreen(navController: NavHostController) {
         },
         content = { padding ->
             Column(
-                modifier = Modifier.fillMaxSize().padding(padding)
+                modifier = Modifier.fillMaxSize()
+                    .padding(padding)
             ) {
+
                 TabRow(selectedTabIndex = state.currentTab.ordinal) {
-                    ChatRoomTab.entries.forEach { tab ->
+                    ChatRoomTab.values().forEach { tab ->
                         Tab(
                             selected = state.currentTab == tab,
-                            onClick = { viewModel.switchTab(tab) },
-                            text = { Text(tabTitles[tab] ?: tab.name) }
+                            onClick = { viewModel.switchTab(tab)},
+                            text = { Text(tabTitles[tab] ?: tab.name)}
                         )
                     }
                 }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (state.isLoading) {
+                if ( state.isLoading ) {
                     Box(modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center) {
+                        contentAlignment =  Alignment.Center) {
                         CircularProgressIndicator()
                     }
+
                 } else {
                     val rooms = when (state.currentTab) {
                         ChatRoomTab.JOINED -> state.joinedRooms
@@ -115,12 +116,11 @@ fun ChatRoomListScreen(navController: NavHostController) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
-                        ) {
-                            Text("채팅방이 없습니다.")
-                        }
-                    } else {
+                        ) { Text("채팅방이 없습니다.") }
+                    } else{
                         LazyColumn {
                             items(rooms) { room ->
+//                            Text(text = room.title )
                                 ChatRoomItem(
                                     room = room,
                                     isOwner = room.owner.name == viewModel.me.name,
@@ -129,53 +129,42 @@ fun ChatRoomListScreen(navController: NavHostController) {
                                             Screen.ChatRoomScreen.createRoute(room.id)
                                         )
                                     },
-                                    onLongPressDelete = {
-
-                                    },
-                                    onLongPressLock = {
-
-                                    }
-                                )
+                                    onLongPressDelete = {},
+                                    onLongPressLock = {})
                             }
                         }
                     }
-
                 }
             }
         }
     )
-
     if (showAddRoomDialog) {
         AlertDialog(
             onDismissRequest = { showAddRoomDialog = false },
-            title = { Text("채팅방 생성") },
+            title = { Text("채팅방 생성")},
             text = {
                 OutlinedTextField(
                     value = newRoomName,
-                    onValueChange = { newRoomName = it },
-                    label = { Text("채팅방 이름") },
+                    onValueChange = { newRoomName = it},
+                    label = { Text("채팅방 제목")},
                     singleLine = true
                 )
             },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (newRoomName.isNotBlank()) {
-                            viewModel.createChatRoom(newRoomName)
-                            newRoomName = ""
-                            showAddRoomDialog = false
-                        }
+                TextButton(onClick = {
+                    if (newRoomName.isNotBlank()) {
+                        viewModel.createChatRoom(newRoomName)
+                        newRoomName = ""
+                        showAddRoomDialog = false
                     }
-                ) {
+                }) {
                     Text("생성")
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = {
-                        showAddRoomDialog = false
-                    }
-                ) {
+                TextButton(onClick = {
+                    showAddRoomDialog = false
+                }) {
                     Text("취소")
                 }
             }

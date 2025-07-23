@@ -13,13 +13,15 @@ class ChatRoomLocalDataSource(context: Context) {
     fun getChatRooms() : LiveData<List<ChatRoomEntity>> {
         return dao.getChatRooms()
     }
-
+    fun getChatRoomsList() : List<ChatRoomEntity> {
+        return dao.getChatRoomsList()
+    }
 
     fun getChatRoomsFlow() : Flow<List<ChatRoomEntity>> {
         return dao.getChatRoomsFlow()
     }
 
-    fun getChatRoom(roomId: Int) : ChatRoomEntity {
+    fun getChatRoom(roomId: Int) : ChatRoomEntity? {
         return dao.getChatRoom(roomId)
     }
 
@@ -31,31 +33,33 @@ class ChatRoomLocalDataSource(context: Context) {
         dao.insertAll(chatRooms)
     }
 
-    suspend fun delete(chatRoom: ChatRoomEntity) {
+    suspend fun delete(chatRoom : ChatRoomEntity) {
         dao.delete(chatRoom)
     }
 
-    suspend fun updateUsers(id: Int, users: List<ChatUser>) {
+    suspend fun updateUsers(id:Int,users:List<ChatUser>) {
         dao.updateUsers(id,users)
     }
 
-    suspend fun updateLastReadMessageId(id: Int, lastReadMessageId: Int) {
+    suspend fun clear() {
+        dao.clear()
+    }
+
+    suspend fun getCount() : Int {
+        return dao.getCount()
+    }
+
+    suspend fun updateLastReadMessageId(id: Int, lastReadMessageId:Int) {
         dao.updateLastReadMessageId(id,lastReadMessageId)
     }
 
     suspend fun updateUnReadCount(id: Int, unReadCount: Int) {
-        dao.updateUnReadCount(id,unReadCount)
+        dao.updateUnReadCount(id, unReadCount)
     }
 
-    suspend fun updateIsLocked(id: Int, isLocked: Boolean) {
-        dao.updateLockStatus(id,isLocked)
+    suspend fun updateLockStatus(id: Int, isLocked: Boolean) {
+        dao.updateLockStatus(id, isLocked)
     }
 
-    suspend fun getCount(): Int {
-        return dao.getCount()
-    }
-    suspend fun clear() {
-        dao.clear()
-    }
 
 }

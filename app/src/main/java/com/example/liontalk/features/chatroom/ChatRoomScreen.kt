@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.example.liontalk.features.chatroom.components.ChatMessageItem
 import kotlinx.coroutines.flow.collectLatest
@@ -49,7 +50,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatRoomScreen(navController: NavHostController, roomId: Int) {
+fun ChatRoomScreen(navController: NavController, roomId: Int) {
     val context = LocalContext.current
     val viewModel = remember {
         ChatRoomViewModel(context.applicationContext as Application, roomId)
@@ -60,11 +61,11 @@ fun ChatRoomScreen(navController: NavHostController, roomId: Int) {
     val messages by viewModel.messages.collectAsState() //for Flow
     val inputMessage = remember { mutableStateOf("") }
 
-    var showLeaveDialog by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val typingUser = remember { mutableStateOf<String?>(null) }
+    val typingUser = remember {mutableStateOf<String?>(null)}
     val eventFlow = viewModel.event
+    var showLeaveDialog by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -94,7 +95,7 @@ fun ChatRoomScreen(navController: NavHostController, roomId: Int) {
                     }
                 }
                 is ChatRoomEvent.ClearInput -> {
-                    inputMessage.value=""
+                    inputMessage.value = ""
                     keyboardController?.hide()
                 }
                 else -> Unit
@@ -104,20 +105,23 @@ fun ChatRoomScreen(navController: NavHostController, roomId: Int) {
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("채팅방 #$roomId") },
+            TopAppBar(title = { Text("채팅방 #$roomId")
+            },
                 navigationIcon = {
                     IconButton(onClick = {
-                        navController.popBackStack()
+
+                        viewModel.back {
+                            navController.popBackStack()
+                        }
+
                     }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기")
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            showLeaveDialog = true
-                        }
-                    ) {
+                    IconButton(onClick = {
+                        showLeaveDialog = true
+                    }) {
                         Icon(imageVector = Icons.Default.ExitToApp, contentDescription = "방 나가기")
                     }
                 }
@@ -125,25 +129,29 @@ fun ChatRoomScreen(navController: NavHostController, roomId: Int) {
         },
         content = { padding ->
             Column(
-                modifier = Modifier.fillMaxSize().padding(padding).navigationBarsPadding()
+                modifier = Modifier.fillMaxSize().padding(padding)
+                    .navigationBarsPadding()
             ) {
-                LazyColumn(modifier = Modifier.weight(1f).padding(8.dp),
+                LazyColumn(modifier = Modifier.weight(1f)
+                    .padding(8.dp),
                     state = listState
+
                 ) {
                     items(messages) { message ->
-                        ChatMessageItem(message, viewModel.me.name == message.sender.name)
+                        ChatMessageItem(message,viewModel.me.name == message.sender.name )
                     }
                 }
-
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(8.dp)
                 ) {
-                    if (typingUser.value !=null) {
+
+                    if(typingUser.value != null) {
                         Text(
-                            text = "${typingUser.value}님이 입력중...",
+                            text="${typingUser.value}님이 입력중...",
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                         )
                     }
+
                     OutlinedTextField(
                         value = inputMessage.value,
                         onValueChange = {
@@ -160,6 +168,7 @@ fun ChatRoomScreen(navController: NavHostController, roomId: Int) {
                         placeholder = { Text("메세지 입력") },
                         maxLines = 4
                     )
+
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Button(
@@ -184,16 +193,14 @@ fun ChatRoomScreen(navController: NavHostController, roomId: Int) {
         AlertDialog(
             onDismissRequest = { showLeaveDialog = false},
             title = { Text("채팅방 나가기")},
-            text = {Text("채팅방을 나가시겠습니까?")},
-            confirmButton =  {
+            text = { Text("채팅방에서 나가시겠습니까?")},
+            confirmButton = {
                 TextButton(onClick = {
                     showLeaveDialog = false
                     viewModel.leaveRoom {
                         navController.popBackStack()
                     }
-                }
-
-                ) {
+                }) {
                     Text("확인")
                 }
             },

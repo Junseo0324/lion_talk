@@ -1,6 +1,7 @@
 package com.example.liontalk.features.chatroomlist
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.liontalk.data.local.entity.ChatRoomEntity
@@ -14,20 +15,21 @@ import com.example.liontalk.model.ChatUser
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class ChatRoomListViewModel(application: Application): ViewModel() {
 
     private val _state = MutableStateFlow(ChatRoomListState())
-    val state: MutableStateFlow<ChatRoomListState> = _state
-
+    val state : StateFlow<ChatRoomListState> = _state.asStateFlow()
 
     private val chatRoomRepository = ChatRoomRepository(application.applicationContext)
-
     private val chatMessageRepository = ChatMessageRepository(application.applicationContext)
+
     private val userPreferenceRepository = UserPreferenceRepository.getInstance()
-    val me: ChatUser get() = userPreferenceRepository.requireMe()
+    val me : ChatUser get() = userPreferenceRepository.requireMe()
 
     init {
         viewModelScope.launch {
@@ -36,37 +38,44 @@ class ChatRoomListViewModel(application: Application): ViewModel() {
                 withContext(Dispatchers.IO) {
                     chatRoomRepository.syncFromServer()
                 }
-                withContext(Dispatchers.Main) {
-                    chatRoomRepository.getChatRoomsFlow().collect { rooms ->
-                        val joined = rooms.filter { it.users.any {p -> p.name == me.name }}
-                        val notJoined = rooms.filter { it.users.none { p -> p.name == me.name }}
-                        _state.value = _state.value.copy(
-                            isLoading = false,
-                            chatRooms = rooms,
-                            joinedRooms = joined,
-                            notJoinedRooms = notJoined
-                        )
-                    }
-                }
-
                 withContext(Dispatchers.IO) {
                     subscribeToMqttTopics()
                 }
-            } catch (e: Exception) {
+
+                chatRoomRepository.getChatRoomsFlow().collect { rooms ->
+
+                    val joined = rooms.filter {it.users.any {p-> p.name == me.name}}
+                    val notJoined = rooms.filter { it.users.none {p-> p.name == me.name} }
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        chatRooms = rooms,
+                        joinedRooms = joined,
+                        notJoinedRooms = notJoined
+                    )
+                }
+
+            } catch (e : Exception ) {
                 _state.value = _state.value.copy(isLoading = false, error = e.message)
             }
         }
     }
 
-    fun createChatRoom(title: String) {
+    fun createChatRoom(title: String ){
+        Log.d("ChatRoomListViewModel",title)
         viewModelScope.launch {
             try {
+
+                Log.d("ChatRoomListViewModel",me.toString())
+
                 val room = ChatRoomEntity(
                     title = title,
                     owner = me,
                     users = emptyList(),
                     createdAt = System.currentTimeMillis()
                 )
+
+
+                Log.d("ChatRoomListViewModel",room.toString())
                 chatRoomRepository.createChatRoom(room.toDto())
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = e.message)
@@ -74,37 +83,43 @@ class ChatRoomListViewModel(application: Application): ViewModel() {
         }
     }
 
-    fun switchTab(tab: ChatRoomTab) {
+    fun switchTab(tab:ChatRoomTab) {
         _state.value = _state.value.copy(currentTab = tab)
     }
 
 
+//---------------------MQTT--------------------------
 
     private val topics = listOf("message")
-    private fun subscribeToMqttTopics() {
+    private fun subscribeToMqttTopics(){
         MqttClient.connect()
-        MqttClient.setOnMessageReceived { topic,message -> {} }
+        MqttClient.setOnMessageReceived { topic, message -> handleReceivedMessage(topic,message)}
         topics.forEach { MqttClient.subscribe("liontalk/rooms/+/$it") }
     }
-    private fun handleReceivedMessage(topic: String, message: String) {
+    private fun handleReceivedMessage(topic:String, message:String) {
         when {
             topic.endsWith("/message") -> onReceivedMessage(message)
         }
     }
-
-
-    private fun onReceivedMessage(message: String) {
+    private fun onReceivedMessage(message:String) {
         try {
-            val dto = Gson().fromJson(message, ChatMessageDto::class.java)
+            val dto = Gson().fromJson(message,ChatMessageDto::class.java)
             viewModelScope.launch {
-                val room = chatRoomRepository.getChatRoom(dto.roomId)
+                val room = withContext(Dispatchers.IO) {
+                    chatRoomRepository.getChatRoom(dto.roomId)
+                }
 
-                val unReadCount = chatMessageRepository.fetchUnreadCountFromServer(dto.roomId, room.lastReadMessageId)
-
-                chatRoomRepository.updateUnReadCount(roomId = dto.roomId,unReadCount)
+                val unReadCount = withContext(Dispatchers.IO) {
+                    chatMessageRepository.fetchUnreadCountFromServer(dto.roomId,
+                        room?.lastReadMessageId
+                    )
+                }
+                withContext(Dispatchers.IO) {
+                    chatRoomRepository.updateUnReadCount(dto.roomId, unReadCount)
+                }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
+    //---------------------MQTT--------------------------
 }

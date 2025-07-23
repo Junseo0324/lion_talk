@@ -19,30 +19,30 @@ interface ChatRoomDao {
     suspend fun insert(chatroom : ChatRoomEntity)
 
     @Delete
-    suspend fun delete(chatroom: ChatRoomEntity)
+    suspend fun delete(chatroom : ChatRoomEntity)
 
 
-    //전체 채팅방 목록
+    // 전체 채팅룸 목록 가져오기
     @Query("SELECT * FROM chat_room ORDER BY id desc")
-    fun getChatRooms(): LiveData<List<ChatRoomEntity>>
+    fun getChatRooms() : LiveData<List<ChatRoomEntity>>
 
-
-
-    //전체 채팅방 목록
     @Query("SELECT * FROM chat_room ORDER BY id desc")
-    fun getChatRoomsFlow(): Flow<List<ChatRoomEntity>>
+    fun getChatRoomsList() : List<ChatRoomEntity>
 
-    // ID에 해당하는 채팅룸 데이터 가져오기
-    @Query("SELECT * FROM chat_room WHERE id = :id")
-    fun getChatRoom(id: Int) : ChatRoomEntity
+    // 전체 채팅룸 목록 가져오기
+    @Query("SELECT * FROM chat_room ORDER BY id desc")
+    fun getChatRoomsFlow() : Flow<List<ChatRoomEntity>>
 
+    // id 에 해당하는 채팅룸 데이터 가져오기
+    @Query("SELECT * FROM chat_room WHERE id=:id")
+    fun getChatRoom(id : Int) : ChatRoomEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(chatRooms: List<ChatRoomEntity>)
+    fun insertAll(chatRooms : List<ChatRoomEntity>)
 
-
+    // 채팅방의 사용자 정보만 업데이트 함.
     @Query("UPDATE chat_room SET users = :users WHERE id = :id")
-    suspend fun updateUsers(id: Int, users: List<ChatUser>)
+    suspend fun updateUsers(id:Int, users:List<ChatUser>)
 
     @Query("SELECT COUNT(*) FROM chat_room")
     suspend fun getCount(): Int
@@ -58,8 +58,6 @@ interface ChatRoomDao {
 
     @Query("UPDATE chat_room SET isLocked = :isLocked WHERE id = :id")
     suspend fun updateLockStatus(id: Int, isLocked: Boolean)
-
-
 
 
 }

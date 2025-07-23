@@ -18,7 +18,7 @@ class ChatMessageLocalDataSource(context: Context) {
     }
 
     fun getMessageForRoom(roomId: Int) : LiveData<List<ChatMessageEntity>> {
-        return dao.getMessageForRoom(roomId)
+        return dao.getMessagesForRoom(roomId)
     }
 
     fun getMessageForRoomFlow(roomId: Int) : Flow<List<ChatMessageEntity>> {
@@ -29,7 +29,15 @@ class ChatMessageLocalDataSource(context: Context) {
         return dao.getMessages(roomId)
     }
 
-    suspend fun getLatestMessage(roomId: Int) : ChatMessageEntity? {
+    suspend fun getLatestMessage(roomId: Int):ChatMessageEntity ? {
         return dao.getLatestMessage(roomId)
+    }
+
+    suspend fun deleteMessagesByRoomId(roomId:Int) {
+        dao.deleteMessagesByRoomId(roomId)
+    }
+
+    suspend fun insertAll(messages: List<ChatMessageEntity>) {
+        dao.insertAll(messages)
     }
 }

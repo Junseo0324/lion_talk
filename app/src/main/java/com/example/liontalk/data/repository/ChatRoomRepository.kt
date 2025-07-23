@@ -26,7 +26,7 @@ class ChatRoomRepository(context: Context) {
     }
 
     fun getChatRoomsFlow(): Flow<List<ChatRoom>> {
-        return local.getChatRoomsFlow().map { it.mapNotNull { entity -> entity.toModel() }}
+        return local.getChatRoomsFlow().map { it.mapNotNull { entity -> entity.toModel() } }
     }
 
 
@@ -37,8 +37,6 @@ class ChatRoomRepository(context: Context) {
         }
     }
 
-
-
     suspend fun deleteChatRoomToRemote(id: Int) {
         remote.deleteRoom(id)
     }
@@ -46,63 +44,66 @@ class ChatRoomRepository(context: Context) {
     //sync : remote to local
     suspend fun syncFromServer() {
         try {
-            Log.d("Sync", "서버에서 채팅방 목록 가져오는 중... ")
-            val remoteRooms = remote.fetchRooms() //원격 채팅방 기록
-            Log.d("Sync", "${remoteRooms.size} 개의 채팅방을 가져옴.")
-            val entities = remoteRooms.map { it.toEntity() } //local entity
-            Log.d("Sync", "${entities.size} 개의 Entity 변환")
-            local.clear()
-            Log.d("Sync", "로컬 DB에 채팅방 데이터 저장 중...")
-            local.insertAll(entities) //local room insert
-            Log.d("Sync", "로컬 DB 저장 완료")
-            val dbCount = local.getCount()
-            Log.d("Sync", "로컬 DB 저장 완료 : $dbCount")
+            Log.d("Sync", "서버에서 채팅방 목록을 가져오는 중...")
+            val remoteRooms = remote.fetchRooms()
+            Log.d("Sync", "서버에서 ${remoteRooms.size}개의 채팅방을 가져옴")
 
+            for (remoteRoom in remoteRooms) {
+                val localRoom = local.getChatRoom(remoteRoom.id)
+                if (localRoom != null) {
+                    // 기존 채팅방이 있으면 users만 업데이트
+                    local.updateUsers(remoteRoom.id, remoteRoom.users)
+                    Log.d("Sync", "기존 채팅방 '${remoteRoom.id}'의 참여자 업데이트")
+                } else {
+                    // 없으면 새로 insert
+                    local.insert(remoteRoom.toEntity())
+                    Log.d("Sync", "신규 채팅방 '${remoteRoom.id}' 추가")
+                }
+            }
+            val dbCount = local.getCount()
+            Log.d("Sync", "로컬 DB에 ${dbCount}개 저장 완료")
 
         } catch (e: Exception) {
-            throw e
+            Log.e("Sync", "채팅방 동기화 중 오류 발생: ${e.message}", e)
         }
     }
 
-    suspend fun enterRoom(user: ChatUser,roomId: Int): ChatRoom {
-        //서버로부터 최신 룸 정보를 가져옴
+    suspend fun enterRoom(user:ChatUser,roomId: Int): ChatRoom {
+        //1.서버로 부터 최신 룸 정보를 가져옴
         val remoteRoom = remote.fetchRoom(roomId)
-
         val requestDto = remoteRoom.addUserIfNotExists(user)
 
         val updatedRoom = remote.updateRoom(requestDto)
-
-        if (updatedRoom !=null) {
-            local.updateUsers(roomId, updatedRoom.users)
+        if(updatedRoom != null) {
+            local.updateUsers(roomId,updatedRoom.users)
         }
-
         return updatedRoom?.toModel() ?: throw Exception("서버 입장 처리 실패")
     }
 
-    suspend fun updateLastReadMessageId(roomId: Int, lastReadMessageId: Int) {
-        local.updateLastReadMessageId(roomId, lastReadMessageId)
+    suspend fun updateLastReadMessageId(roomId : Int,lastReadMessageId: Int) {
+        local.updateLastReadMessageId(roomId,lastReadMessageId)
     }
 
     suspend fun updateUnReadCount(roomId: Int,unReadCount: Int) {
         local.updateUnReadCount(roomId,unReadCount)
     }
 
-    suspend fun updateLockStatus(roomId:Int,isLocked: Boolean) {
+    suspend fun updateLockStatus(roomId:Int, isLocked:Boolean) {
         try {
             val remoteRoom = remote.fetchRoom(roomId)
             val updated = remoteRoom.copy(isLocked = isLocked)
             val result = remote.updateRoom(updated) ?: throw Exception("방 잠금($isLocked) 실패")
 
             result?.let {
-                local.updateIsLocked(roomId,isLocked)
+                local.updateLockStatus(roomId,isLocked)
             }
-        } catch (e: Exception) {
-            Log.d("ROOM", "채팅방 상태 변경중 오류 발생 : ${e.message}")
+        } catch (e : Exception) {
+            Log.e("ROOM","채팅방 상태 변경중 오류 발생 : ${e.message}")
         }
     }
 
-    suspend fun getChatRoom(roomId: Int) : ChatRoom {
-        return local.getChatRoom(roomId).toModel()
+    suspend fun getChatRoom(roomId:Int) :ChatRoom? {
+        return local.getChatRoom(roomId)?.toModel()
     }
 
 
