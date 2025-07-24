@@ -33,4 +33,7 @@ interface ChatMessageDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(messages: List<ChatMessageEntity>)
+
+    @Query("SELECT COUNT(*) FROM chat_message WHERE roomId = :roomId AND id > :lastReadMessageId")
+    suspend fun getUnreadMessageCount(roomId: Int, lastReadMessageId: Int): Int
 }
