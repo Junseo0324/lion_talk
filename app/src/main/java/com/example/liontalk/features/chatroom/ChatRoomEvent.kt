@@ -7,4 +7,6 @@ sealed class ChatRoomEvent {
     data class ChatRoomLeave(val name:String):ChatRoomEvent()
     object ScrollToBottom: ChatRoomEvent()
     object ClearInput: ChatRoomEvent()
+    object Kicked: ChatRoomEvent()
+    object Exploded : ChatRoomEvent()
 }

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.liontalk.data.remote.dto.ChatMessageDto
+import com.example.liontalk.data.remote.dto.KickMessageDto
 import com.example.liontalk.data.remote.dto.PresenceMessageDto
 import com.example.liontalk.data.remote.dto.TypingMessageDto
 import com.example.liontalk.data.remote.mqtt.MqttClient
@@ -11,6 +12,7 @@ import com.example.liontalk.data.repository.ChatMessageRepository
 import com.example.liontalk.data.repository.ChatRoomRepository
 import com.example.liontalk.data.repository.UserPreferenceRepository
 import com.example.liontalk.model.ChatMessage
+import com.example.liontalk.model.ChatRoom
 import com.example.liontalk.model.ChatUser
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
@@ -47,16 +49,14 @@ class ChatRoomViewModel(application: Application, private val roomId: Int) : Vie
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
-//        chatMessageRepository.getMessagesForRoomFlow(roomId)
-//        .stateIn(
-//            scope = viewModelScope,
-//            started = SharingStarted.WhileSubscribed(5000),
-//            initialValue = emptyList()
-//        )
 
     private val userPreferenceRepository = UserPreferenceRepository.getInstance()
 
     val me : ChatUser get() = userPreferenceRepository.requireMe()
+
+    //현재 채팅방 정보
+    private val _room = MutableStateFlow<ChatRoom?>(null)
+    val room: StateFlow<ChatRoom?> = _room
 
     private val _event = MutableSharedFlow<ChatRoomEvent>()
     val event = _event.asSharedFlow()
@@ -69,15 +69,22 @@ class ChatRoomViewModel(application: Application, private val roomId: Int) : Vie
             }
 
             withContext(Dispatchers.IO) {
-                MqttClient.connect()
-            }
-
-            withContext(Dispatchers.IO) {
                 subscribeToMqttTopics()
             }
+            loadRoomInfo()
 
             //최초 채팅방 진입시 입장 이벤트 전송
             publishEnterStatus()
+        }
+    }
+
+    private fun loadRoomInfo() {
+        viewModelScope.launch {
+            chatRoomRepository.getChatRoomFlow(roomId).collect { room ->
+                room.let {
+                    _room.value = it
+                }
+            }
         }
     }
 
@@ -110,7 +117,7 @@ class ChatRoomViewModel(application: Application, private val roomId: Int) : Vie
 
 
     //MQTT - methods
-    private val topics = listOf("message","typing","enter","leave")
+    private val topics = listOf("message","typing","enter","leave","kick","explod","lock")
     //MQTT 구독 및 메세지 수신 처리
     private fun subscribeToMqttTopics() {
         MqttClient.setOnMessageReceived { topic, message -> handleIncomingMqttMessage(topic,message) }
@@ -132,6 +139,38 @@ class ChatRoomViewModel(application: Application, private val roomId: Int) : Vie
             topic.endsWith("/typing") -> onReceivedTyping(message)
             topic.endsWith("/enter") -> onReceivedEnter(message)
             topic.endsWith("/leave") -> onReceivedLeave(message)
+            topic.endsWith("/kick") -> onReceivedKick(message)
+            topic.endsWith("/explod") -> onReceivedExplod(message)
+            topic.endsWith("/lock") -> onReceivedLocked(message)
+        }
+    }
+
+    fun onReceivedLocked(message: String) {
+        val dto = Gson().fromJson(message, PresenceMessageDto::class.java)
+        if (dto.sender!=me.name) {
+            viewModelScope.launch {
+                chatRoomRepository.syncFromServer()
+            }
+        }
+    }
+
+
+    private fun onReceivedExplod(message: String) {
+        val dto = Gson().fromJson(message, PresenceMessageDto::class.java)
+        if (dto.sender != me.name) {
+            _explodeState.value = true
+//            viewModelScope.launch {
+//                _event.emit(ChatRoomEvent.Exploded)
+//            }
+        }
+    }
+
+    private fun onReceivedKick(message: String) {
+        val dto = Gson().fromJson(message, KickMessageDto::class.java)
+        if (dto.target == me.name) {
+            viewModelScope.launch {
+                _event.emit(ChatRoomEvent.Kicked)
+            }
         }
     }
 
@@ -148,6 +187,11 @@ class ChatRoomViewModel(application: Application, private val roomId: Int) : Vie
                 _event.emit(ChatRoomEvent.ScrollToBottom)
             }
         }
+    }
+
+    private fun publishExplod() {
+        val json = Gson().toJson(PresenceMessageDto(me.name))
+        MqttClient.publish("liontalk/rooms/$roomId/explod",json)
     }
     //채팅방 퇴장 메세지 핸들러
     private fun onReceivedLeave(message: String) {
@@ -224,9 +268,24 @@ class ChatRoomViewModel(application: Application, private val roomId: Int) : Vie
     // 채팅방 나가기
     fun leaveRoom(onComplete:() -> Unit) {
         viewModelScope.launch {
+
+            chatRoomRepository.removeUserFromRoom(me,roomId)
             publishLeaveStatus()
 
-            onComplete()
+            withContext(Dispatchers.Main) {
+                onComplete()
+            }
+
+        }
+    }
+
+    fun kickUser(user: ChatUser, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            chatRoomRepository.removeUserFromRoom(user, roomId)
+            publishKick(user)
+            withContext(Dispatchers.Main) {
+                onComplete()
+            }
         }
     }
 
@@ -266,5 +325,37 @@ class ChatRoomViewModel(application: Application, private val roomId: Int) : Vie
     private fun publishLeaveStatus() {
         val json = Gson().toJson(PresenceMessageDto(me.name))
         MqttClient.publish("liontalk/rooms/$roomId/leave",json)
+    }
+
+
+    //사용자 추방 하기 이벤트 퍼블리시
+    fun publishKick(user: ChatUser) {
+        val data = mapOf("target" to user.name)
+        val json = Gson().toJson(data)
+        MqttClient.publish("liontalk/rooms/$roomId/kick",json)
+    }
+
+    private val _explodeState = MutableStateFlow(false)
+    val explodeState :StateFlow<Boolean> = _explodeState
+
+    fun triggerExplosion() {
+        _explodeState.value = true
+
+        viewModelScope.launch {
+            publishExplod()
+        }
+    }
+
+    private fun publishLockStatus() {
+        val json = Gson().toJson(PresenceMessageDto(me.name))
+        MqttClient.publish("liontalk/rooms/$roomId/lock",json)
+    }
+
+    fun toggleRoomLock(isLock: Boolean) {
+        viewModelScope.launch {
+            chatRoomRepository.toggleLock(isLock,roomId)
+
+            publishLockStatus()
+        }
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
+import com.example.liontalk.data.remote.mqtt.MqttClient
 import com.example.liontalk.ui.theme.LiontalkTheme
 import com.example.liontalk.ui.theme.navigation.ChatAppNavigation
 
@@ -20,6 +21,11 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             ChatAppNavigation(navController = navController)
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        MqttClient.disconnect()
     }
 }
 

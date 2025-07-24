@@ -1,6 +1,7 @@
 package com.example.liontalk.features.chatroomlist
 
 import android.app.Application
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +60,14 @@ fun ChatRoomListScreen(navController: NavHostController) {
         ChatRoomTab.NOT_JOINED to "미참여"
     )
 
+    val explodedRoomId = navController.currentBackStackEntry?.savedStateHandle?.get<Int>("explodedRoomId")
+    LaunchedEffect(explodedRoomId) {
+        explodedRoomId?.let {
+            viewModel.removeChatRoom(explodedRoomId)
+
+            navController.currentBackStackEntry?.savedStateHandle?.remove<Int>("explodedRoomId")
+        }
+    }
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -125,9 +135,21 @@ fun ChatRoomListScreen(navController: NavHostController) {
                                     room = room,
                                     isOwner = room.owner.name == viewModel.me.name,
                                     onClick = {
-                                        navController.navigate(
-                                            Screen.ChatRoomScreen.createRoute(room.id)
-                                        )
+                                        val isMeOwner = room.owner.name == viewModel.me.name
+                                        val isMeparticipant = room.users.any { it.name == viewModel.me.name}
+                                        if (!room.isLocked || isMeOwner || isMeparticipant) {
+                                            navController.navigate(
+                                                Screen.ChatRoomScreen.createRoute(room.id)
+                                            )
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "잠긴 방입니다.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+
+
                                     },
                                     onLongPressDelete = {},
                                     onLongPressLock = {})

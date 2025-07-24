@@ -25,6 +25,10 @@ class ChatRoomLocalDataSource(context: Context) {
         return dao.getChatRoom(roomId)
     }
 
+    fun getChatRoomFlow(roomId: Int) : Flow<ChatRoomEntity?> {
+        return dao.getChatRoomFlow(roomId)
+    }
+
     suspend fun insert(chatRoom: ChatRoomEntity) {
         dao.insert(chatRoom)
     }
@@ -59,6 +63,10 @@ class ChatRoomLocalDataSource(context: Context) {
 
     suspend fun updateLockStatus(id: Int, isLocked: Boolean) {
         dao.updateLockStatus(id, isLocked)
+    }
+
+    suspend fun deleteById(id: Int) {
+        dao.deleteById(id)
     }
 
 

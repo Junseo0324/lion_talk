@@ -9,6 +9,7 @@ import com.example.liontalk.data.local.entity.ChatRoomEntity
 import com.example.liontalk.data.remote.datasource.ChatRoomRemoteDataSource
 import com.example.liontalk.data.remote.dto.ChatRoomDto
 import com.example.liontalk.data.remote.dto.addUserIfNotExists
+import com.example.liontalk.data.remote.dto.removeUser
 import com.example.liontalk.model.ChatRoom
 import com.example.liontalk.model.ChatRoomMapper.toEntity
 import com.example.liontalk.model.ChatRoomMapper.toModel
@@ -44,12 +45,30 @@ class ChatRoomRepository(context: Context) {
         remote.deleteRoom(id)
     }
 
+    suspend fun getRoomFromRemote(roomId: Int): ChatRoom? {
+        try {
+            return remote.fetchRoom(roomId).toModel()
+        } catch (e: Exception) {
+            Log.e("", "getRoomFromRemote: ", )
+            throw e
+        }
+    }
+
     //sync : remote to local
     suspend fun syncFromServer() {
         try {
             Log.d("ChattingRoom-Sync", "서버에서 채팅방 목록을 가져오는 중...")
             val remoteRooms = remote.fetchRooms()
             Log.d("ChattingRoom-Sync", "서버에서 ${remoteRooms.size}개의 채팅방을 가져옴")
+
+            val remoteRoomIds = remoteRooms.map { it.id }.toSet()
+            val localRoomIds = local.getChatRoomsList().map { it.id }.toSet()
+            val roomsToDelete = localRoomIds - remoteRoomIds
+            for (roomId in roomsToDelete) {
+                local.deleteById(roomId)
+            }
+
+
 
             for (remoteRoom in remoteRooms) {
                 val localRoom = local.getChatRoom(remoteRoom.id)
@@ -127,5 +146,38 @@ class ChatRoomRepository(context: Context) {
         return local.getChatRoom(roomId)?.toModel()
     }
 
+    fun getChatRoomFlow(roomId: Int) : Flow<ChatRoom?> {
+        return local.getChatRoomFlow(roomId).map {
+            it?.toModel() ?: throw Exception("채팅방 정보를 가져오는데 실패했습니다.")
+        }
+    }
+
+    suspend fun removeUserFromRoom(user:ChatUser, roomId: Int) {
+        val room = remote.fetchRoom(roomId)
+        if (room != null) {
+            val updated = room.removeUser(user)
+            val updatedRoom = remote.updateRoom(updated)
+            if (updatedRoom != null) {
+                local.updateUsers(roomId,updatedRoom.users)
+            }
+        } else {
+            throw Exception("퇴장 실패 : 채팅방 정보가 없습니다.")
+        }
+    }
+
+    suspend fun toggleLock(isLock : Boolean, roomId: Int) {
+        try {
+            val remoteRoom = remote.fetchRoom(roomId)
+            if(remoteRoom != null) {
+                val updated = remoteRoom.copy(isLocked = isLock)
+                val result = remote.updateRoom(updated) ?: throw Exception("방 잠금($isLock) 실패")
+                result?.let {
+                    local.updateLockStatus(roomId,isLock)
+                }
+            }
+        }catch (e: Exception) {
+            throw Exception("잠금 실패 : ${e.message}",e)
+        }
+    }
 
 }

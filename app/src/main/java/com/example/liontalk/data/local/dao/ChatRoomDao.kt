@@ -37,6 +37,10 @@ interface ChatRoomDao {
     @Query("SELECT * FROM chat_room WHERE id=:id")
     fun getChatRoom(id : Int) : ChatRoomEntity?
 
+
+    @Query("SELECT * FROM chat_room WHERE id=:id")
+    fun getChatRoomFlow(id : Int) : Flow<ChatRoomEntity?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(chatRooms : List<ChatRoomEntity>)
 
@@ -59,5 +63,7 @@ interface ChatRoomDao {
     @Query("UPDATE chat_room SET isLocked = :isLocked WHERE id = :id")
     suspend fun updateLockStatus(id: Int, isLocked: Boolean)
 
+    @Query("DELETE FROM chat_room WHERE id=:id")
+    suspend fun deleteById(id: Int)
 
 }
