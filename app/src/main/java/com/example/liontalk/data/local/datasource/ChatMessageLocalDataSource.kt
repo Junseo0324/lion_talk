@@ -7,7 +7,7 @@ import com.example.liontalk.data.local.entity.ChatMessageEntity
 import kotlinx.coroutines.flow.Flow
 
 class ChatMessageLocalDataSource(context: Context) {
-    private val dao = AppDataBase.create(context).chatMessageDao()
+    private val dao = AppDataBase.getInstance(context).chatMessageDao()
 
     suspend fun clear() {
         dao.clear()

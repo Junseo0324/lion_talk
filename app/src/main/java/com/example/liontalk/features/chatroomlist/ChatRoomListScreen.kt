@@ -1,6 +1,5 @@
 package com.example.liontalk.features.chatroomlist
 
-import android.app.Application
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.liontalk.ui.theme.navigation.Screen
 
@@ -46,9 +46,7 @@ import com.example.liontalk.ui.theme.navigation.Screen
 fun ChatRoomListScreen(navController: NavHostController) {
     val context = LocalContext.current
 
-    val viewModel = remember {
-        ChatRoomListViewModel(context.applicationContext as Application)
-    }
+    val viewModel: ChatRoomListViewModel = viewModel()
 
     val state by viewModel.state.collectAsState()
 

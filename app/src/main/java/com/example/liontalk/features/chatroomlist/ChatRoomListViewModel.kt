@@ -2,7 +2,7 @@ package com.example.liontalk.features.chatroomlist
 
 import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.liontalk.data.local.entity.ChatRoomEntity
 import com.example.liontalk.data.remote.dto.ChatMessageDto
@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ChatRoomListViewModel(application: Application): ViewModel() {
+class ChatRoomListViewModel(application: Application): AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(ChatRoomListState())
     val state : StateFlow<ChatRoomListState> = _state.asStateFlow()
@@ -124,7 +124,9 @@ class ChatRoomListViewModel(application: Application): ViewModel() {
 
     private fun onReceivedRoomStateChanged(message: String) {
         viewModelScope.launch {
-            chatRoomRepository.syncFromServer()
+            withContext(Dispatchers.IO) {
+                chatRoomRepository.syncFromServer()
+            }
         }
     }
     private fun onReceivedMessage(message:String) {

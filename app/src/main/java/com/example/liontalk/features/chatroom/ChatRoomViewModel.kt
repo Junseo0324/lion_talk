@@ -1,7 +1,7 @@
 package com.example.liontalk.features.chatroom
 
 import android.app.Application
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.liontalk.data.remote.dto.ChatMessageDto
 import com.example.liontalk.data.remote.dto.KickMessageDto
@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ChatRoomViewModel(application: Application, private val roomId: Int) : ViewModel() {
+class ChatRoomViewModel(application: Application, private val roomId: Int) : AndroidViewModel(application) {
 
     private val chatMessageRepository = ChatMessageRepository(application.applicationContext)
     private val chatRoomRepository = ChatRoomRepository(application.applicationContext)
@@ -149,7 +149,9 @@ class ChatRoomViewModel(application: Application, private val roomId: Int) : Vie
         val dto = Gson().fromJson(message, PresenceMessageDto::class.java)
         if (dto.sender!=me.name) {
             viewModelScope.launch {
-                chatRoomRepository.syncFromServer()
+                withContext(Dispatchers.IO) {
+                    chatRoomRepository.syncFromServer()
+                }
             }
         }
     }
